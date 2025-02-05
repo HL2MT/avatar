@@ -6,7 +6,7 @@ from gtts import gTTS
 from playsound import playsound
 
 # Set API Key
-os.environ["GROQ_API_KEY"] = "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"
+os.environ["GROQ_API_KEY"] = "Your groq api"  #https://console.groq.com/docs/quickstart
 
 # Initialize Groq client
 client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
