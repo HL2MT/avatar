@@ -1,4 +1,4 @@
-# avatar
+# Avatar
 This pipeline is designed for ASR+NLP+TTS task.
 In this user can talk to AI chatbot in hindi.
 This pipeline is tested on python 3.12
@@ -10,6 +10,7 @@ pip install requirements.txt
 # Then
 replace with your groq api key in line 8 in speech_to_sspeech_with_history.py
 
+# Then
 python speech_to_speech_with_history.py
 
 # Note
