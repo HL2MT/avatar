@@ -8,6 +8,8 @@ This pipeline is tested on python 3.12
 pip install requirements.txt
 
 # Then
+replace with your groq api key in line 8 in speech_to_sspeech_with_history.py
+
 python speech_to_speech_with_history.py
 
 # Note
@@ -15,6 +17,8 @@ This is just a POC with open source models whisper for Speech to text and llama 
 Alignment according to avatar design.Models like gemma 2 or llama with max 7b perameters is best for these conversational task with enough perameters these models are fast on time for first token as well.And use inference on groq cloud for real time conversation.
 
 For speech to text gtts is used it is good go but have some limitations like ratelimit as being in a library it can't use controled for rate limitations,as it is little slow fo instant conversation so better use eleven lab models which are great in hindi and fastest as well.
+
+Also history for every 5 conversation is summarised to minimise api calls but in real system history is converted to summary on every converation input-output.
 
 
 # Future pipeline for conversational avatar
