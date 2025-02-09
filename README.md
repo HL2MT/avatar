@@ -28,3 +28,5 @@ Whisper(SFT on hindi)+llama or gemma 2(SFT on hindi)+ elevenlab model
 or 
 model merging for single model (speech-to-speech)(inference on groq cloud with LPU)
 
+# Spoiler 
+Both of my speakers and mike are not working properly(poor guy),so I used microphone from my earphones and speakers from external connected speakers,so I was the reason ,sometimes it lags for few microsecs while speaking due to changing mike and speakers setting everytime.
