@@ -4,10 +4,9 @@ import speech_recognition as sr
 from groq import Groq
 from gtts import gTTS
 from playsound import playsound
-
+import tempfile
 from dotenv import load_dotenv
 load_dotenv()  # Load environment variables from .env file
-
 
 # Set API Key
 os.environ["GROQ_API_KEY"] = os.getenv("GROQ_API_KEY") #"Your groq api"  #https://console.groq.com/docs/quickstart
@@ -15,179 +14,107 @@ os.environ["GROQ_API_KEY"] = os.getenv("GROQ_API_KEY") #"Your groq api"  #https:
 # Initialize Groq client
 client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
-# Conversation history storage
+# Initialize conversation history
 conversation_history = []
-
-# Rate Limits (Free Tier)
-NLP_RPM, NLP_TPM = 30, 6000  # NLP model limits
-ASR_RPM, ASR_ASH = 20, 7200  # ASR model limits
-
-
-def handle_rate_limit(response):
-    """Handles 429 errors with exponential backoff"""
-    if response.status_code == 429:
-        retry_after = int(response.headers.get("Retry-After", 5))  # Default to 5 sec
-        print(f"Rate limit exceeded. Retrying after {retry_after} seconds...")
-        time.sleep(retry_after)
-        return True
-    return False
-
-
-def request_with_retry(api_call, max_retries=5):
-    """Generic function to handle API calls with retry on failure"""
-    retries = 0
-    while retries < max_retries:
-        try:
-            response = api_call()
-            return response  # Return response if successful
-
-        except Exception as e:
-            if "429" in str(e):  # Detect rate limit error
-                wait_time = 2 ** retries  # Exponential backoff
-                print(f"Rate limit reached. Retrying in {wait_time} seconds...")
-                time.sleep(wait_time)
-                retries += 1
-            else:
-                print(f"API error: {e}")
-                break
-    return None  # Return None if all retries fail
 
 
 def summarize_history():
-    """Summarizes conversation history when it gets too long."""
+    """Summarizes conversation history every time before sending to the model."""
     global conversation_history
-    if len(conversation_history) < 5:  # Only summarize when there are 5+ exchanges
-        return
-
-    print("Summarizing conversation history...")
 
     def api_call():
         return client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[
-                {"role": "user", "content": "Summarize this conversation history briefly:"},
-                {"role": "assistant", "content": "\n".join(conversation_history)}
+                {"role": "user", "content": "Summarize this conversation briefly:".join(conversation_history)},
             ],
             temperature=0.7,
-            max_tokens=512
+            max_tokens=300
         )
 
-    summary = request_with_retry(api_call)
-    if summary:
-        conversation_history = [summary.choices[0].message.content]  # Keep only summary
-        print("Conversation history summarized.")
+    summary = api_call()
+    return summary.choices[0].message.content if summary else ""
 
 
 def text_to_text(input_text):
-    """Processes text using the NLP model with conversation history."""
+    """Processes text using the NLP model with summarized history."""
     global conversation_history
-
-    # Add input to history
     conversation_history.append(f"User: {input_text}")
-
-    # Summarize if history is too long
-    summarize_history()
+    summarized_history = summarize_history()
 
     def api_call():
         return client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[
-                {"role": "user", "content": "You are a friendly and fluent communicator in Hindi"},
-                {"role": "assistant", "content": "\n".join(conversation_history)}
+                {"role": "user", "content": f"You are a friendly assistant fluent in Hindi,this is our previous conversation{summarized_history}"},
             ],
             temperature=1,
             max_tokens=512,
-            top_p=1,
-            stream=True
+            top_p=1
         )
 
-    completion = request_with_retry(api_call)
-    if not completion:
-        return ""
-
-    full_response = []
-    for chunk in completion:
-        chunk_text = chunk.choices[0].delta.content or ""
-        full_response.append(chunk_text)
-        print(chunk_text, end="")
-
-    complete_text = "".join(full_response)
-
-    # Add response to history
-    conversation_history.append(f"Assistant: {complete_text}")
-
-    return complete_text
+    completion = api_call()
+    response = completion.choices[0].message.content if completion else ""
+    conversation_history.append(f"Assistant: {response}")
+    return response
 
 
-# Function to capture and transcribe audio from microphone
 def transcribe_from_microphone():
-    """Captures speech from microphone and transcribes it."""
+    """Captures speech and transcribes it."""
     recognizer = sr.Recognizer()
-    print("Listening... Speak into your microphone.")
-
     with sr.Microphone() as source:
         recognizer.adjust_for_ambient_noise(source)
+        st.write("Listening... Speak now!")
         try:
             audio_data = recognizer.listen(source)
-            print("Processing audio...")
-
-            # Convert audio to byte data for API
-            audio_bytes = audio_data.get_wav_data()
-
-            def api_call():
-                return client.audio.transcriptions.create(
-                    file=("microphone_input.wav", audio_bytes),  # Simulated file upload
-                    model="whisper-large-v3",
-                    prompt="You are a genius in communication with humans",
-                    response_format="json",
-                    language="hi"
-                )
-
-            transcription = request_with_retry(api_call)
-            if transcription:
-                print("Transcription:", transcription.text)
-                return transcription.text
-            else:
-                print("Failed to transcribe.")
-                return ""
-
+            text = recognizer.recognize_google(audio_data, language="hi")
+            return text
         except sr.UnknownValueError:
-            print("Sorry, I couldn't understand what you said.")
-        except sr.RequestError as e:
-            print(f"Could not request results; {e}")
+            return "Sorry, I couldn't understand."
+        except sr.RequestError:
+            return "Speech recognition service error."
+
+
+import os
 
 
 def text_to_speech(text):
     """Converts text to speech and plays it."""
-    import pygame
+    file_path = "response.mp3"
 
-    def play_audio(file):
-        pygame.mixer.init()
-        pygame.mixer.music.load(file)
-        pygame.mixer.music.play()
+    if os.path.exists(file_path):  # Ensure file is not locked
+        try:
+            os.remove(file_path)  # Delete previous file
+        except PermissionError:
+            print("File is in use, retrying...")
+            pygame.mixer.quit()  # Force close pygame
+            os.remove(file_path)
 
-        while pygame.mixer.music.get_busy():  # Wait until the audio finishes playing
-            pygame.time.Clock().tick(10)
-    print("Generating speech...")
-    try:
-        tts = gTTS(text=text, lang="hi")
-        tts.save("output.mp3")
-        play_audio("output.mp3")
-        #playsound("output.mp3")
-    except Exception as e:
-        print(f"TTS Error: {e}")
+    tts = gTTS(text=text, lang="hi")
+    tts.save(file_path)
 
+    pygame.mixer.init()
+    pygame.mixer.music.load(file_path)
+    pygame.mixer.music.play()
 
-# Start the ASR-NLP-TTS pipeline
-if __name__ == "__main__":
-    while True:
-        transcription_text = transcribe_from_microphone()
+    while pygame.mixer.music.get_busy():
+        pygame.time.Clock().tick(10)
 
-        if transcription_text.lower() in ["exit", "quit", "बंद करो"]:  # Supports both English & Hindi exit commands
-            print("Exiting conversation. Goodbye!")
-            break
-
-        response = text_to_text(transcription_text)
-        text_to_speech(response)
+# Sidebar for conversation summary
+st.sidebar.title("Conversation Summary")
+summary_text = summarize_history()
+st.sidebar.write(summary_text if summary_text else "No summary available yet.")
 
 
+# Streamlit UI
+st.title("Hindi AI Chatbot")
+user_input = ""
+
+if st.button("🎤 Speak"):
+    user_input = transcribe_from_microphone()
+    st.write("You: ", user_input)
+
+if user_input:
+    bot_response = text_to_text(user_input)
+    st.write("Bot: ", bot_response)
+    text_to_speech(bot_response)
