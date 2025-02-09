@@ -11,7 +11,7 @@ pip install requirements.txt
 replace with your groq api key in .env file
 
 # Then
-python speech_to_speech_with_history.py
+streamit run speech_to_speech_with_history.py
 
 # Note
 This is just a POC with open source models whisper for Speech to text and llama for text to text,these models support hindi and good to go but as these are not designed for specific hindi conversation ,sometime they doesn't work 100% accurately.So better use SFT with Preference
