@@ -5,8 +5,12 @@ from groq import Groq
 from gtts import gTTS
 from playsound import playsound
 
+from dotenv import load_dotenv
+load_dotenv()  # Load environment variables from .env file
+
+
 # Set API Key
-os.environ["GROQ_API_KEY"] = "Your groq api"  #https://console.groq.com/docs/quickstart
+os.environ["GROQ_API_KEY"] = os.getenv("GROQ_API_KEY") #"Your groq api"  #https://console.groq.com/docs/quickstart
 
 # Initialize Groq client
 client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
