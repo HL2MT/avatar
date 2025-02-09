@@ -8,7 +8,7 @@ This pipeline is tested on python 3.12
 pip install requirements.txt
 
 # Then
-replace with your groq api key in line 8 in speech_to_sspeech_with_history.py
+replace with your groq api key in .env file
 
 # Then
 python speech_to_speech_with_history.py
@@ -19,7 +19,7 @@ Alignment according to avatar design.Models like gemma 2 or llama with max 7b pe
 
 For speech to text gtts is used it is good go but have some limitations like ratelimit as being in a library it can't use controled for rate limitations,as it is little slow fo instant conversation so better use eleven lab models which are great in hindi and fastest as well.
 
-Also history for every 5 conversation is summarised to minimise api calls but in real system history is converted to summary on every converation input-output.
+Also history for every  conversation is summarised to keep conversation engaged with memory.
 
 
 # Future pipeline for conversational avatar
