@@ -1,5 +1,6 @@
 import os
 import time
+import streamlit as lit
 import speech_recognition as sr
 from groq import Groq
 from gtts import gTTS
